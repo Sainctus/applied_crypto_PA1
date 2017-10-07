@@ -98,7 +98,6 @@ def decrypt(key, enc):
     cipher = AES.AESCipher(key[:32], AES.MODE_ECB)
     enc = cipher.decrypt(enc)
     return enc.decode('utf-8')
-
 #####################################################################
 
 #Performs the conversion and XOR operations
@@ -109,8 +108,13 @@ def prepare(plain_text, previous):
     temp = hex_text ^ previous
     temp = hex(temp)
     temp = temp[2:-1]
+    print temp
     temp = binascii.unhexlify(temp)
     return temp
+
+#####################################################################
+
+#def unXOR(previous, decrypted):
 
 #####################################################################
 
@@ -161,10 +165,10 @@ def main(KEYFILE, IFILE, OFILE):
     blocks[len(blocks) - 1] = pad(blocks[len(blocks) - 1])
 
 #FIXME
-#    for i in blocks:
-#        print i
-#
-#    print "\n"
+    for i in blocks:
+        print i
+
+    print "\n"
 
     encrypted = []
     first = encrypt(key, prepare(blocks[0], v))
@@ -172,18 +176,28 @@ def main(KEYFILE, IFILE, OFILE):
 
     i = 0
     for i in range(len(blocks)):
-        temp = encrypt(key, prepare(blocks[i], encrypted[i - 1]))
+        temp = prepare(blocks[i], encrypted[i - 1])
+        temp = encrypt(key, temp)
         encrypted.append(temp)
 
 #FIXME
-#    for i in encrypted:
-#        print i
-
-    f = open(OFILE, 'w')
-    f.write(v)
+    print "\n"
     for i in encrypted:
-        f.write(i)
-    f.close()
+        print i
+
+#    f = open(OFILE, 'w')
+#    f.write(v)
+#    for i in encrypted:
+#        f.write(i)
+#    f.close()
+
+    decrypted = []
+    for i in encrypted:
+        temp = decrypt(key, i)
+
+    print "\n"
+    for i in decrypted:
+        print i
 
 #####################################################################
 

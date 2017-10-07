@@ -4,81 +4,17 @@ import argparse
 import sys
 import os
 import random
+import string
 import binascii
 from Crypto.Cipher import AES
+from multiprocessing import Pool
 
 #####################################################################
 
-IV = binascii.hexlify(os.urandom(16))
-
-#####################################################################
-
-def pad(data):
-    if(len(data) % 16 == 0):
-        padding_required = 16
-    else:
-        padding_required = 16 - (len(data) % 16)
-
-#FIXME    print "The amount to pad is ", padding_required
-
-    #Horrible, but nothing would translate a 2-digit integer to its hex
-    #equivallent. Everything translated each digit individually.
-    if padding_required >= 1 and padding_required < 10:
-        padChar = str(padding_required)
-    elif padding_required == 10:
-        padChar = 'a'
-    elif padding_required == 11:
-        padChar = 'b'
-    elif padding_required == 12:
-        padChar = 'c'
-    elif padding_required == 13:
-        padChar = 'd'
-    elif padding_required == 14:
-        padChar = 'e'
-    elif padding_required == 15:
-        padChar = 'f'
-    elif padding_required == 16:
-        padChar = '0'
-
-#FIXME    print "The padding character is ", padChar
-
-    for i in range(padding_required):
-        data += padChar
-
-    return data
-
-#####################################################################
-
-def unpad(data):
-    padChar = data[-1]
-
-#FIXME    print "The character to be removed is: ", padChar
-
-
-    #Horrible, but nothing would translate a 2-digit integer to its hex
-    #equivallent. Everything translated each digit individually.
-    if int(padChar) >= 1 and int(padChar) < 10:
-        padChar_int = int(padChar)
-    elif padChar == 'a':
-        padChar_int = 10
-    elif padChar == 'b':
-        padChar_int = 11
-    elif padChar == 'c':
-        padChar_int = 12
-    elif padChar == 'd':
-        padChar_int = 13
-    elif padChar == 'e':
-        padChar_int = 14
-    elif padChar == 'f':
-        padChar_int = 15
-    elif padChar == '0':
-        padChar_int = 16
-
-#FIXME    print "The number of characters to be removed is: ", padChar_int
-
-    data = data[:-padChar_int]
-
-    return data
+def generate():
+    size = 32
+    chars=string.digits
+    return ''.join(random.choice(chars) for _ in range(size))
 
 #####################################################################
 
@@ -102,37 +38,57 @@ def decrypt(key, enc):
 #####################################################################
 
 #Performs the conversion and XOR operations
-def prepare(plain_text, previous):
+def XOR(plain_text, counter):
     hex_text = binascii.hexlify(plain_text)
     hex_text = int(hex_text, 16)
-    previous = int(previous, 16)
-    temp = hex_text ^ previous
+    counter = int(counter, 16)
+    temp = hex_text ^ counter
     temp = hex(temp)
     temp = temp[2:-1]
-    temp = binascii.unhexlify(temp)
     return temp
 
 #####################################################################
 
+def unXOR(cipher_text, counter):
+    cipher_text = int(cipher_text, 16)
+    counter = int(counter, 16)
+    temp = cipher_text ^ counter
+    temp = hex(temp)
+    temp = temp[2:-1]
+    return binascii.unhexlify(temp)
+
+#####################################################################
+
+def parallelize(key, text, counter):
+    enc_ctr = binascii.unhexlify(str(counter))
+    enc_ctr = encrypt(key, enc_ctr)
+    output = XOR(text, enc_ctr)
+    encrypted.append(output)
+
+#####################################################################
+
+IV = generate() 
+
 def main(KEYFILE, IFILE, OFILE):
     #This block looks at the value of IV and attempts to open it as a file. If successful, it reads the IV value from file. If unsuccessful, it uses a randomly generated IV.
-    v = IV
+
     try:
-        f = open(v, 'r')
-        v = f.read()
+        f = open(IV, 'r')
+        ctr = f.read()
+        ctr = ctr.rstrip("\n")
+        ctr = int(ctr)
         f.close()
     except IOError:
+        ctr = int(IV)
         pass
-#FIXME    print "The IV is: ", v, len(v)
-#FIXME    print "\n"
+    except TypeError:
+        ctr = int(IV)
+        pass
 
     #Reads the key from file and prints
     f = open(KEYFILE, 'r')
     key = f.read()
     f.close()
-
-#FIXME    print "The key is: ", key, len(key)
-#FIXME    print "\n"
 
     f = open(IFILE, 'r')
     blocks = []
@@ -147,43 +103,48 @@ def main(KEYFILE, IFILE, OFILE):
             else:
                 s += c
 
-        blocks.append(s)
+        if s is not None:
+            blocks.append(s)
         if len(s) < 16:
             break
     
     temp = blocks[len(blocks) - 1]
-    temp = temp[:-1]
+    temp = temp.rstrip("\n")
     blocks[len(blocks) - 1] = temp
 
-    if len(blocks[len(blocks) - 1]) == 16:
-        blocks.append('')
+    if blocks[len(blocks) - 1] == '':
+        blocks.pop()
 
-    blocks[len(blocks) - 1] = pad(blocks[len(blocks) - 1])
+    for i in blocks:
+        print i
 
-#FIXME
-#    for i in blocks:
-#        print i
-#
-#    print "\n"
+    print "\n"
+
 
     encrypted = []
-    first = encrypt(key, prepare(blocks[0], v))
-    encrypted.append(first)
 
-    i = 0
-    for i in range(len(blocks)):
-        temp = encrypt(key, prepare(blocks[i], encrypted[i - 1]))
-        encrypted.append(temp)
+    for i in range(len(blocks)):    
+        enc_ctr = binascii.unhexlify(str(ctr))
+        enc_ctr = encrypt(key, enc_ctr)
+        output = XOR(blocks[i], enc_ctr)
+        encrypted.append(output)
+        ctr += 1
 
-#FIXME
-#    for i in encrypted:
-#        print i
+
+#Couldn't figure out how to make this multiprocessing work. Documentation for it is awful
+#    p = Pool(4)
+#    results = p.map(parallelize, (key, blocks[0 + i], ctr + i) for i in range(len(blocks)))
+#    print results
+
+    for i in encrypted:
+        print i
 
     f = open(OFILE, 'w')
-    f.write(v)
     for i in encrypted:
         f.write(i)
+    f.write("\n")
     f.close()
+
 
 #####################################################################
 
