@@ -19,7 +19,6 @@ def pad(data):
     else:
         padding_required = 16 - (len(data) % 16)
 
-#FIXME    print "The amount to pad is ", padding_required
 
     #Horrible, but nothing would translate a 2-digit integer to its hex
     #equivallent. Everything translated each digit individually.
@@ -40,7 +39,6 @@ def pad(data):
     elif padding_required == 16:
         padChar = '0'
 
-#FIXME    print "The padding character is ", padChar
 
     for i in range(padding_required):
         data += padChar
@@ -52,7 +50,7 @@ def pad(data):
 def unpad(data):
     padChar = data[-1]
 
-#FIXME    print "The character to be removed is: ", padChar
+    print "The character to be removed is: ", padChar
 
 
     #Horrible, but nothing would translate a 2-digit integer to its hex
@@ -74,7 +72,7 @@ def unpad(data):
     elif padChar == '0':
         padChar_int = 16
 
-#FIXME    print "The number of characters to be removed is: ", padChar_int
+    print "The number of characters to be removed is: ", padChar_int
 
     data = data[:-padChar_int]
 
@@ -120,80 +118,56 @@ def prepare(plain_text, previous):
 
 def main(KEYFILE, IFILE, OFILE):
     #This block looks at the value of IV and attempts to open it as a file. If successful, it reads the IV value from file. If unsuccessful, it uses a randomly generated IV.
-    v = IV
+    
     try:
-        f = open(v, 'r')
+        f = open(IV, 'r')
         v = f.read()
+        v = v.rstrip("\n")
         f.close()
     except IOError:
+        v = IV
         pass
-#FIXME    print "The IV is: ", v, len(v)
-#FIXME    print "\n"
+
 
     #Reads the key from file and prints
     f = open(KEYFILE, 'r')
     key = f.read()
     f.close()
 
-#FIXME    print "The key is: ", key, len(key)
-#FIXME    print "\n"
 
     f = open(IFILE, 'r')
     blocks = []
     while 1:
         s = ''
-        for i in range(16):
+        for i in range(32):
             c = f.read(1)
             if c is None:
                 f.close()
-                s += c
                 break
             else:
                 s += c
-
-        blocks.append(s)
-        if len(s) < 16:
+        if s is not None and s is not '':
+            blocks.append(s)
+        if len(s) < 32:
             break
     
     temp = blocks[len(blocks) - 1]
-    temp = temp[:-1]
+    temp = temp.rstrip("\n")
     blocks[len(blocks) - 1] = temp
 
-    if len(blocks[len(blocks) - 1]) == 16:
-        blocks.append('')
-
-    blocks[len(blocks) - 1] = pad(blocks[len(blocks) - 1])
 
 #FIXME
     for i in blocks:
-        print i
+        print i, len(i)
 
     print "\n"
 
-    encrypted = []
-    first = encrypt(key, prepare(blocks[0], v))
-    encrypted.append(first)
-
-    i = 0
-    for i in range(len(blocks)):
-        temp = prepare(blocks[i], encrypted[i - 1])
-        temp = encrypt(key, temp)
-        encrypted.append(temp)
-
-#FIXME
-    print "\n"
-    for i in encrypted:
-        print i
-
-#    f = open(OFILE, 'w')
-#    f.write(v)
-#    for i in encrypted:
-#        f.write(i)
-#    f.close()
 
     decrypted = []
-    for i in encrypted:
+    for i in blocks:
         temp = decrypt(key, i)
+
+    decrypted[len(blocks) - 1] = unpad(decrypted[len(blocks) - 1])
 
     print "\n"
     for i in decrypted:

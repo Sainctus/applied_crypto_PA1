@@ -140,6 +140,7 @@ def main(KEYFILE, IFILE, OFILE):
         print i
 
     f = open(OFILE, 'w')
+    f.write(ctr)
     for i in encrypted:
         f.write(i)
     f.write("\n")

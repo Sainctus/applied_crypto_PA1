@@ -19,7 +19,6 @@ def pad(data):
     else:
         padding_required = 16 - (len(data) % 16)
 
-#FIXME    print "The amount to pad is ", padding_required
 
     #Horrible, but nothing would translate a 2-digit integer to its hex
     #equivallent. Everything translated each digit individually.
@@ -40,7 +39,6 @@ def pad(data):
     elif padding_required == 16:
         padChar = '0'
 
-#FIXME    print "The padding character is ", padChar
 
     for i in range(padding_required):
         data += padChar
@@ -52,7 +50,6 @@ def pad(data):
 def unpad(data):
     padChar = data[-1]
 
-#FIXME    print "The character to be removed is: ", padChar
 
 
     #Horrible, but nothing would translate a 2-digit integer to its hex
@@ -74,7 +71,6 @@ def unpad(data):
     elif padChar == '0':
         padChar_int = 16
 
-#FIXME    print "The number of characters to be removed is: ", padChar_int
 
     data = data[:-padChar_int]
 
@@ -123,16 +119,12 @@ def main(KEYFILE, IFILE, OFILE):
         f.close()
     except IOError:
         pass
-#FIXME    print "The IV is: ", v, len(v)
-#FIXME    print "\n"
 
     #Reads the key from file and prints
     f = open(KEYFILE, 'r')
     key = f.read()
     f.close()
 
-#FIXME    print "The key is: ", key, len(key)
-#FIXME    print "\n"
 
     f = open(IFILE, 'r')
     blocks = []
@@ -152,7 +144,7 @@ def main(KEYFILE, IFILE, OFILE):
             break
     
     temp = blocks[len(blocks) - 1]
-    temp = temp[:-1]
+    temp = temp.rstrip("\n")
     blocks[len(blocks) - 1] = temp
 
     if len(blocks[len(blocks) - 1]) == 16:
@@ -160,11 +152,6 @@ def main(KEYFILE, IFILE, OFILE):
 
     blocks[len(blocks) - 1] = pad(blocks[len(blocks) - 1])
 
-#FIXME
-#    for i in blocks:
-#        print i
-#
-#    print "\n"
 
     encrypted = []
     first = encrypt(key, prepare(blocks[0], v))
@@ -175,14 +162,12 @@ def main(KEYFILE, IFILE, OFILE):
         temp = encrypt(key, prepare(blocks[i], encrypted[i - 1]))
         encrypted.append(temp)
 
-#FIXME
-#    for i in encrypted:
-#        print i
 
     f = open(OFILE, 'w')
     f.write(v)
     for i in encrypted:
         f.write(i)
+    f.write("\n")
     f.close()
 
 #####################################################################
