@@ -131,7 +131,7 @@ def main(KEYFILE, IFILE, OFILE):
         ctr += 1
 
 
-#Couldn't figure out how to make this multiprocessing work. Documentation for it is awful
+#Couldn't figure out how to make this multiprocessing work. Documentation for it is awful. All I could find were examples of functions using single iterators. I tried to manipulate my funciton so that the only thing that needed to change was 'i', but I couldn't figure out the syntax to make it work.
 #    p = Pool(4)
 #    results = p.map(parallelize, (key, blocks[0 + i], ctr + i) for i in range(len(blocks)))
 #    print results

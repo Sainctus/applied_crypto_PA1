@@ -95,30 +95,29 @@ def decrypt(key, enc):
     enc = binascii.unhexlify(enc)
     cipher = AES.AESCipher(key[:32], AES.MODE_ECB)
     enc = cipher.decrypt(enc)
+    print str(len(enc))
     return enc.decode('utf-8')
+
 #####################################################################
 
 #Performs the conversion and XOR operations
-def prepare(plain_text, previous):
-    hex_text = binascii.hexlify(plain_text)
-    hex_text = int(hex_text, 16)
-    previous = int(previous, 16)
-    temp = hex_text ^ previous
+def prepare(plain, hexnum):
+    plain = binascii.hexlify(plain)
+    num1 = int(plain, 16)
+    num2 = int(hexnum, 16)
+    temp = num1 ^ num2
     temp = hex(temp)
-    temp = temp[2:-1]
+    temp = temp[2:]
     print temp
     temp = binascii.unhexlify(temp)
     return temp
 
 #####################################################################
 
-#def unXOR(previous, decrypted):
-
-#####################################################################
 
 def main(KEYFILE, IFILE, OFILE):
-    #This block looks at the value of IV and attempts to open it as a file. If successful, it reads the IV value from file. If unsuccessful, it uses a randomly generated IV.
-    
+    #Try to read IV from file, otherwise create
+    ##FIXME Probably need to read IV below from file
     try:
         f = open(IV, 'r')
         v = f.read()
@@ -134,44 +133,49 @@ def main(KEYFILE, IFILE, OFILE):
     key = f.read()
     f.close()
 
-
+    #Reads blocks from file
+    ##FIXME Might need to read IV here instead of above
     f = open(IFILE, 'r')
     blocks = []
     while 1:
-        s = ''
-        for i in range(32):
-            c = f.read(1)
-            if c is None:
-                f.close()
-                break
-            else:
-                s += c
-        if s is not None and s is not '':
-            blocks.append(s)
-        if len(s) < 32:
+        c = f.read(32)
+        if c is None:
+            f.close()
             break
-    
+        if c is not None and c is not '':
+            blocks.append(c)
+        if len(c) < 32:
+            break
+
+    #Strip newline characters
     temp = blocks[len(blocks) - 1]
-    temp = temp.rstrip("\n")
-    blocks[len(blocks) - 1] = temp
+    if temp == "\n":
+        del blocks[len(blocks) - 1]
+    else:    
+        temp = temp.rstrip("\n")
+        blocks[len(blocks) - 1] = temp
 
-
+##########################
 #FIXME
+    print len(blocks)
     for i in blocks:
         print i, len(i)
+##########################
 
-    print "\n"
-
-
+    #Decrypt
     decrypted = []
-    for i in blocks:
-        temp = decrypt(key, i)
+    for i in range(1, len(blocks)):
+        temp = decrypt(key, blocks[i])
+        plain_text = prepare(temp, blocks(i - 1))
+        decrypted.append(plain_text)
 
     decrypted[len(blocks) - 1] = unpad(decrypted[len(blocks) - 1])
 
-    print "\n"
+##########################
+#FIXME needs to write to file
     for i in decrypted:
-        print i
+        print decrypted
+##########################
 
 #####################################################################
 

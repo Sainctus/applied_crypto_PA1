@@ -99,23 +99,29 @@ def decrypt(key, enc):
 
 #Performs the conversion and XOR operations
 def prepare(plain_text, previous):
-    hex_text = binascii.hexlify(plain_text)
-    hex_text = int(hex_text, 16)
-    previous = int(previous, 16)
-    temp = hex_text ^ previous
+    enc1 = binascii.hexlify(plain_text)
+    enc1 = int(enc1, 16)
+    enc2 = int(previous, 16)
+    temp = enc1 ^ enc2
     temp = hex(temp)
-    temp = temp[2:-1]
+    if(len(temp) % 2 != 0):
+        foo = hex(0)
+        foo = foo[2:]
+        temp = temp + foo
+    temp = temp[2:]
+    print temp
     temp = binascii.unhexlify(temp)
     return temp
 
 #####################################################################
 
 def main(KEYFILE, IFILE, OFILE):
-    #This block looks at the value of IV and attempts to open it as a file. If successful, it reads the IV value from file. If unsuccessful, it uses a randomly generated IV.
+    #Try to open and read IV from file, otherwise use default value
     v = IV
     try:
         f = open(v, 'r')
         v = f.read()
+        v = binascii.hexlify(v)
         f.close()
     except IOError:
         pass
@@ -125,44 +131,41 @@ def main(KEYFILE, IFILE, OFILE):
     key = f.read()
     f.close()
 
-
+    #Read in blocks from file
     f = open(IFILE, 'r')
     blocks = []
     while 1:
-        s = ''
-        for i in range(16):
-            c = f.read(1)
-            if c is None:
-                f.close()
-                s += c
-                break
-            else:
-                s += c
+        c = f.read(16)
+        if c is None:
+            f.close()
+            break
 
-        blocks.append(s)
-        if len(s) < 16:
+        blocks.append(c)
+        if len(c) < 16:
             break
     
+    #Strip newline character from last block
     temp = blocks[len(blocks) - 1]
     temp = temp.rstrip("\n")
     blocks[len(blocks) - 1] = temp
 
+    #Add an empty block for padding if necessary
     if len(blocks[len(blocks) - 1]) == 16:
         blocks.append('')
 
+    #Perform padding
     blocks[len(blocks) - 1] = pad(blocks[len(blocks) - 1])
 
-
+    #Encrypt
     encrypted = []
-    first = encrypt(key, prepare(blocks[0], v))
-    encrypted.append(first)
-
-    i = 0
-    for i in range(len(blocks)):
-        temp = encrypt(key, prepare(blocks[i], encrypted[i - 1]))
+    prior = v
+    for tblock in blocks:
+        temp = encrypt(key, prepare(tblock, prior))
         encrypted.append(temp)
+        prior = temp
+        print str(temp)
 
-
+    #Print output to file
     f = open(OFILE, 'w')
     f.write(v)
     for i in encrypted:
