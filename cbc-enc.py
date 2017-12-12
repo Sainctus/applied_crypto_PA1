@@ -104,12 +104,11 @@ def prepare(plain_text, previous):
     enc2 = int(previous, 16)
     temp = enc1 ^ enc2
     temp = hex(temp)
+    temp = temp[2:-1]
     if(len(temp) % 2 != 0):
         foo = hex(0)
         foo = foo[2:]
-        temp = temp + foo
-    temp = temp[2:]
-    print temp
+        temp = foo + temp
     temp = binascii.unhexlify(temp)
     return temp
 
@@ -163,8 +162,7 @@ def main(KEYFILE, IFILE, OFILE):
         temp = encrypt(key, prepare(tblock, prior))
         encrypted.append(temp)
         prior = temp
-        print str(temp)
-
+    
     #Print output to file
     f = open(OFILE, 'w')
     f.write(v)
