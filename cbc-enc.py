@@ -168,7 +168,6 @@ def main(KEYFILE, IFILE, OFILE):
     f.write(v)
     for i in encrypted:
         f.write(i)
-    f.write("\n")
     f.close()
 
 #####################################################################

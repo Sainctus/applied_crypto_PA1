@@ -7,9 +7,6 @@ import random
 import binascii
 from Crypto.Cipher import AES
 
-#####################################################################
-
-IV = binascii.hexlify(os.urandom(16))
 
 #####################################################################
 
@@ -95,57 +92,45 @@ def decrypt(key, enc):
     enc = binascii.unhexlify(enc)
     cipher = AES.AESCipher(key[:32], AES.MODE_ECB)
     enc = cipher.decrypt(enc)
-    print str(len(enc))
     return enc.decode('utf-8')
 
 #####################################################################
 
 #Performs the conversion and XOR operations
-def prepare(plain, hexnum):
-    plain = binascii.hexlify(plain)
-    num1 = int(plain, 16)
-    num2 = int(hexnum, 16)
-    temp = num1 ^ num2
+def prepare(plain_text, previous):
+    enc1 = binascii.hexlify(plain_text)
+    enc1 = int(enc1, 16)
+    enc2 = int(previous, 16)
+    temp = enc1 ^ enc2
     temp = hex(temp)
-    temp = temp[2:]
-    print temp
+    temp = temp[2:-1]
+    if(len(temp) % 2 != 0):
+        foo = hex(0)
+        foo = foo[2:]
+        temp = foo + temp
     temp = binascii.unhexlify(temp)
     return temp
 
 #####################################################################
 
-
 def main(KEYFILE, IFILE, OFILE):
-    #Try to read IV from file, otherwise create
-    ##FIXME Probably need to read IV below from file
-    try:
-        f = open(IV, 'r')
-        v = f.read()
-        v = v.rstrip("\n")
-        f.close()
-    except IOError:
-        v = IV
-        pass
-
-
     #Reads the key from file and prints
     f = open(KEYFILE, 'r')
     key = f.read()
     f.close()
 
     #Reads blocks from file
-    ##FIXME Might need to read IV here instead of above
     f = open(IFILE, 'r')
     blocks = []
     while 1:
         c = f.read(32)
-        if c is None:
+        if c is None or len(c) < 32:
             f.close()
             break
         if c is not None and c is not '':
             blocks.append(c)
-        if len(c) < 32:
-            break
+
+    IV = blocks[0]
 
     #Strip newline characters
     temp = blocks[len(blocks) - 1]
@@ -157,25 +142,38 @@ def main(KEYFILE, IFILE, OFILE):
 
 ##########################
 #FIXME
-    print len(blocks)
     for i in blocks:
-        print i, len(i)
+        print i
 ##########################
 
     #Decrypt
     decrypted = []
+    prior = IV
     for i in range(1, len(blocks)):
+        print "encrypted = " + blocks[i]
         temp = decrypt(key, blocks[i])
-        plain_text = prepare(temp, blocks(i - 1))
+        
+        print "decrypted = " + temp
+        print "prior = " + prior
+        plain_text = prepare(temp, prior)
+        
+        print "plain text = " + plain_text
+        prior = blocks[i]
         decrypted.append(plain_text)
 
     decrypted[len(blocks) - 1] = unpad(decrypted[len(blocks) - 1])
 
 ##########################
-#FIXME needs to write to file
+#FIXME
     for i in decrypted:
         print decrypted
 ##########################
+
+    #print output to file
+#    f = open(OFILE, 'w')
+#    for i in decrypted:
+#        f.write(i)
+#    f.close()
 
 #####################################################################
 
@@ -184,7 +182,7 @@ if __name__ == "__main__":
     parser.add_argument("--f", help="Key file", required=True)
     parser.add_argument("--i", help="Input file", required=True)
     parser.add_argument("--o", help="Output file", required=True)
-    parser.add_argument("--v", help="IV file", required=False, type = str, default=IV)
+    parser.add_argument("--v", help="IV file", required=False, type = str)
     args = parser.parse_args()
 
     IV = args.v
